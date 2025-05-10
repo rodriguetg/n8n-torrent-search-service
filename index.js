@@ -1,13 +1,18 @@
 const express = require('express');
 const TorrentSearchApi = require('torrent-search-api');
 TorrentSearchApi.enablePublicProviders();
-// Optionnel : n’activer que les trackers français
+// Optionnel : trackers FR uniquement
 // TorrentSearchApi.disablePublicProviders();
 // TorrentSearchApi.enableProvider('Yggtorrent');
 // TorrentSearchApi.enableProvider('Cpasbien');
 
 const app = express();
 app.use(express.json());
+
+// ←--- Ajouté pour que GET / renvoie 200
+app.get('/', (_req, res) => {
+  res.send('pong');
+});
 
 app.get('/search', async (req, res) => {
   const q = req.query.query;
@@ -17,7 +22,7 @@ app.get('/search', async (req, res) => {
   try {
     // 1) Lancer la recherche
     const results = await TorrentSearchApi.search(q, 'Movies', 5);
-    // 2) Pour chaque résultat, récupérer le magnetLink
+    // 2) Récupérer le magnetLink pour chaque résultat
     const detailed = await Promise.all(
       results.map(async (r) => {
         const magnetLink = await TorrentSearchApi.getMagnet(r);
@@ -27,7 +32,7 @@ app.get('/search', async (req, res) => {
         };
       })
     );
-    // 3) Renvoyer le tableau
+    // 3) Renvoyer
     res.json(detailed);
   } catch (e) {
     res.status(500).json({ error: e.message });
