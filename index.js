@@ -1,4 +1,4 @@
-const express        = require('express');
+const express         = require('express');
 const TorrentSearchApi = require('torrent-search-api');
 TorrentSearchApi.enablePublicProviders();
 
@@ -7,34 +7,40 @@ app.use(express.json());
 
 app.get('/search', async (req, res) => {
   const q = (req.query.query || '').trim();
+  console.log('[search] incoming query:', q);
   if (!q) {
+    console.log('[search] missing query');
     return res.status(400).json({ error: 'Paramètre ?query manquant' });
   }
+
   try {
-    // 1) Détecter la saison
+    // détecter la saison
     const seasonMatch = q.match(/saison\s+(\d+)/i);
-    let category  = 'Movies';
+    let category   = 'Movies';
     let searchTerm = q;
     if (seasonMatch) {
       category   = 'TV';
-      // Convertir "saison" → "season"
       searchTerm = q.replace(/saison\s+(\d+)/i, 'season $1');
     }
-    // 2) Lancer la recherche
+    console.log('[search] term="%s", category=%s', searchTerm, category);
+
+    // lancer la recherche
     const results = await TorrentSearchApi.search(searchTerm, category, 5);
-    // 3) Récupérer le magnetLink pour chacun
+    console.log('[search] TorrentSearchApi.search returned %d items', results.length);
+
+    // récupérer les magnets
     const detailed = await Promise.all(
-      results.map(async (r) => {
+      results.map(async (r, i) => {
         const magnetLink = await TorrentSearchApi.getMagnet(r);
-        return {
-          title:      r.title,
-          magnetLink,
-        };
+        console.log('[search]  item #%d: %s → %s…', i, r.title, magnetLink.slice(0,30));
+        return { title: r.title, magnetLink };
       })
     );
-    // 4) Renvoyer le tableau
+
+    console.log('[search] sending back %d items', detailed.length);
     res.json(detailed);
   } catch (e) {
+    console.error('[search] ERROR', e);
     res.status(500).json({ error: e.message });
   }
 });
