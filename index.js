@@ -5,6 +5,13 @@ TorrentSearchApi.enablePublicProviders();
 const app = express();
 app.use(express.json());
 
+/**
+ * Health-check pour garder le service éveillé via Cron Job Render
+ */
+app.get('/ping', (_req, res) => {
+  res.status(200).send('pong');
+});
+
 app.get('/search', async (req, res) => {
   const q = (req.query.query || '').trim();
   console.log('[search] incoming query:', q);
